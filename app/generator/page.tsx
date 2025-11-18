@@ -43,7 +43,7 @@ export default function Generator() {
 
   // Check payment status from localStorage on mount
   useEffect(() => {
-    const hasPaid = localStorage.getItem('signatureflow_paid') === 'true';
+    const hasPaid = typeof window !== 'undefined' ? localStorage.getItem('signatureflow_paid') === 'true' : false;
     if (hasPaid) {
       setData((prev) => ({ ...prev, isPro: true }));
     }
@@ -51,12 +51,14 @@ export default function Generator() {
 
   // Function to check if user has paid
   const hasUserPaid = () => {
-    return localStorage.getItem('signatureflow_paid') === 'true';
+    return typeof window !== 'undefined' ? localStorage.getItem('signatureflow_paid') === 'true' : false;
   };
 
   // Function to mark payment as complete (for manual verification in MVP)
   const verifyPayment = () => {
-    localStorage.setItem('signatureflow_paid', 'true');
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('signatureflow_paid', 'true');
+    }
     setData((prev) => ({ ...prev, isPro: true }));
     setToastMessage({
       type: 'success',
@@ -85,7 +87,7 @@ export default function Generator() {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = (e) => {
-        const img = new Image();
+        const img = document.createElement('img');
         img.onload = () => {
           const canvas = document.createElement('canvas');
           let width = img.width;
