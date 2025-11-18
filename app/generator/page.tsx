@@ -47,6 +47,22 @@ export default function Generator() {
     if (hasPaid) {
       setData((prev) => ({ ...prev, isPro: true }));
     }
+
+    // Verificar si el usuario regresó de un pago exitoso
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      const paymentStatus = urlParams.get('payment');
+      
+      if (paymentStatus === 'success') {
+        // Limpiar el parámetro de la URL
+        window.history.replaceState({}, '', window.location.pathname);
+        
+        // Verificar y activar el pago
+        if (!hasPaid) {
+          verifyPayment();
+        }
+      }
+    }
   }, []);
 
   // Function to check if user has paid
@@ -357,38 +373,44 @@ export default function Generator() {
     }
   };
 
-  const removeWatermark = () => {
+  const removeWatermark = async () => {
     // Check if already paid
     if (hasUserPaid()) {
       setData((prev) => ({ ...prev, isPro: true }));
       return;
     }
 
-    // Open Stripe payment link in new tab
-    // TODO: Replace [TU-LINK] with your actual Stripe Payment Link URL
-    const stripePaymentLink = '[TU-LINK]';
-    
-    if (stripePaymentLink === '[TU-LINK]') {
+    try {
+      // Crear sesión de checkout
+      const response = await fetch('/api/create-checkout-session', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to create checkout session');
+      }
+
+      const { url } = await response.json();
+      
+      if (url) {
+        // Redirigir a Stripe Checkout
+        window.location.href = url;
+      } else {
+        throw new Error('No checkout URL received');
+      }
+    } catch (error) {
+      console.error('Error initiating payment:', error);
       setToastMessage({
         type: 'error',
-        title: 'Payment Link Not Configured',
-        description: 'Please configure the Stripe payment link in the code.'
+        title: 'Payment Error',
+        description: 'Failed to initiate payment. Please try again.'
       });
       setShowToast(true);
       setTimeout(() => setShowToast(false), 3000);
-      return;
     }
-    
-    window.open(stripePaymentLink, '_blank');
-    
-    // Show toast with instructions
-    setToastMessage({
-      type: 'success',
-      title: 'Payment Link Opened',
-      description: 'Complete payment in the new tab. After payment, refresh this page or contact support for verification.'
-    });
-    setShowToast(true);
-    setTimeout(() => setShowToast(false), 5000);
   };
 
   return (
